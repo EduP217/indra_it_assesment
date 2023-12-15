@@ -1,0 +1,68 @@
+service: students-service
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1
+  environment:
+    STUDENT_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: "*"
+
+functions:
+  listStudents:
+    handler: api/student.list
+    memorySize: 128
+    description: List all students
+    events:
+      - http: 
+          path: students
+          method: get
+
+  studentSubmission:
+    handler: api/student.submit
+    memorySize: 128
+    description: Submit student information
+    events:
+      - http: 
+          path: students
+          method: post
+  
+  getSwapi:
+    handler: api/student.getSwapi
+    memorySize: 128
+    description: Get data from swapi by category
+    events:
+      - http: 
+          path: swapi/{category}
+          method: get
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    StudentsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "id"
+            AttributeType: "S"   
+        KeySchema:
+          -
+            AttributeName: "id"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.STUDENT_TABLE}
